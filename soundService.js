@@ -11,7 +11,7 @@ module.exports.initialize = () => {
         console.log("there's been an error!! ERROR: " + err);
         reject(err);
       } else {
-        console.log(data);
+        //console.log(data);
         albums = JSON.parse(data);
 
         //read the genre
@@ -20,7 +20,7 @@ module.exports.initialize = () => {
             console.log("there's been an error!! ERROR: " + err);
             reject(err);
           } else {
-            console.log(data);
+            //console.log(data);
             genres = JSON.parse(data);
 
             //send back the file
@@ -40,9 +40,22 @@ module.exports.getAlbums = () => {
 };
 
 module.exports.getGenres = () => {
-    return new Promise((resolve, reject) => {
-      if (genres.length > 0) resolve(genres);
-      else reject("no genres");
+  return new Promise((resolve, reject) => {
+    if (genres.length > 0) resolve(genres);
+    else reject("no genres");
+  });
+};
+
+module.exports.getAlbumById = (id) => {
+  return new Promise((resolve, reject) => {
+    let result;
+    albums.forEach((album) => {
+      if (album.id ==id) result = album;
     });
-  };
-  
+    if (result) {
+      return resolve(result);
+    } else {
+      reject("no album matches!");
+    }
+  });
+};

@@ -1,18 +1,26 @@
-// const readFile = require("./readFile");
-
-// readFile.readMyFile("./data/albums.json").then(function(data){
-//     console.log(data);
-
-// }).catch(function(err){
-//     console.log("ERROR:"+err);
-// })
-
 const express = require("express");
 const app = express();
 const path = require("path");
 
-const HTTP_PORT = process.env.PORT || 8080;
+const multer = require("multer");
+const cloudinary = require("cloudinary");
+const sstreamifier = require("streamifier");
+
+const env = require("dotenv");
+env.config();
+
 const soundService = require("./soundService"); //import soundService.js
+
+const HTTP_PORT = process.env.PORT || 8080;
+
+cloudinary.config({ 
+  cloud_name: 'dwleas0js', 
+  api_key: '353252431234466', 
+  api_secret: 'YYpEl4oJnukC1VSrQ1GYctxaGXU',
+  secure: true
+})
+
+const upload = multer(); // no {storage: storage}
 
 function onHttpStart() {
   console.log("Express http sever listening on :" + HTTP_PORT);
@@ -35,6 +43,19 @@ app.get("/albums", (req, res) => {
     .catch((err) => {
       console.log(err);
       res.send("there's been a error!");
+    });
+});
+
+//get the specific id page
+app.get("/albums/:id", (req, res) => {
+  //console.log(req.params);
+  soundService
+    .getAlbumById(req.params.id)
+    .then((album) => {
+      res.json(album);
+    })
+    .catch((err) => {
+      res.json(err);
     });
 });
 
