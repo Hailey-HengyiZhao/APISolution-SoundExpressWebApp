@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { resolve } = require("path");
 
 let albums = [];
 let genres = [];
@@ -59,3 +60,17 @@ module.exports.getAlbumById = (id) => {
     }
   });
 };
+
+
+module.exports.addAlbum = (album)=>{
+  return new Promise ((resolve, reject)=>{
+    if(albums){
+      album.id = albums.length + 1
+      albums.push(album)
+      resolve()
+    }else{
+      console.log("albums not available")
+      reject();
+    }
+  })
+}

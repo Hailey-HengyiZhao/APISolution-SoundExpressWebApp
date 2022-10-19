@@ -13,12 +13,12 @@ const soundService = require("./soundService"); //import soundService.js
 
 const HTTP_PORT = process.env.PORT || 8080;
 
-cloudinary.config({ 
-  cloud_name: 'dwleas0js', 
-  api_key: '353252431234466', 
-  api_secret: 'YYpEl4oJnukC1VSrQ1GYctxaGXU',
-  secure: true
-})
+cloudinary.config({
+  cloud_name: "dwleas0js", //process.env.CLOUD_NAME (private)
+  api_key: "353252431234466",
+  api_secret: "YYpEl4oJnukC1VSrQ1GYctxaGXU",
+  secure: true,
+});
 
 const upload = multer(); // no {storage: storage}
 
@@ -46,6 +46,10 @@ app.get("/albums", (req, res) => {
     });
 });
 
+app.get("/albums/new", (req, res) => {
+  res.sendFile(path.join(__dirname, "/views/albumForm.html"));
+});
+
 //get the specific id page
 app.get("/albums/:id", (req, res) => {
   //console.log(req.params);
@@ -69,6 +73,45 @@ app.get("/genres", (req, res) => {
       console.log(err);
       res.send("there's been a error!");
     });
+});
+
+//name of the middleware(file name)
+app.post("/albums/new", upload.single("albumCover"), (res, req) => {
+  if (req.file) {
+    let streamUpload = (req) => {
+      return new Promise((resolve, reject) => {
+        let stream = cloudinary.uploader.upload_stream((error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
+        });
+
+        streamifier.createReadStream(req.file.buffer).pipe(stream);
+      });
+    };
+
+    async function upload(req) {
+      let result = await streamUpload(req);
+      console.log(result);
+      return result;
+    }
+
+    upload(req).then((uploaded) => {
+      processPost(uploaded.url);
+    });
+  } else {
+    processPost("");
+  }
+
+  function processPost(imageUrl) {
+    req.body.albumCover = imageUrl;
+    soundService.addAlbum(req.body).then(() => {
+      res.redirect("/albums");
+    });
+    // TODO: Process the req.body and add it as a new Blog Post before redirecting to /posts
+  }
 });
 
 app.use((req, res) => {
