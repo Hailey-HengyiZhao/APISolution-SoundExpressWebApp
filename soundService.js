@@ -1,76 +1,89 @@
-const fs = require("fs");
-const { resolve } = require("path");
 
-let albums = [];
-let genres = [];
+const fs = require("fs")
+
+
+let albums = []
+let genres = []
 
 module.exports.initialize = () => {
   return new Promise((resolve, reject) => {
-    //read data
-    fs.readFile("./data/albums.json", "utf8", (err, data) => {
+    fs.readFile('./data/albums.json', 'utf8', (err, data) => {
       if (err) {
-        console.log("there's been an error!! ERROR: " + err);
-        reject(err);
+        reject(err)
       } else {
-        //console.log(data);
-        albums = JSON.parse(data);
-
-        //read the genre
-        fs.readFile("./data/genres.json", "utf8", (err, data) => {
+        // console.log(data)
+        albums = JSON.parse(data)
+        fs.readFile('./data/genres.json', 'utf8', (err, data) => {
           if (err) {
-            console.log("there's been an error!! ERROR: " + err);
-            reject(err);
+            reject(err)
           } else {
-            //console.log(data);
-            genres = JSON.parse(data);
-
-            //send back the file
-            resolve("Success!");
+            // console.log(data)
+            genres = JSON.parse(data)
+            resolve("Success!")
           }
-        });
+        })
       }
-    });
-  });
-};
+    })
+  })
+}
 
 module.exports.getAlbums = () => {
   return new Promise((resolve, reject) => {
-    if (albums.length > 0) resolve(albums);
-    else reject("no albums");
-  });
-};
-
-module.exports.getGenres = () => {
-  return new Promise((resolve, reject) => {
-    if (genres.length > 0) resolve(genres);
-    else reject("no genres");
-  });
-};
+    if(albums.length > 0) {
+      resolve(albums)
+    } else {
+      reject("no albums")
+    }
+  })
+}
 
 module.exports.getAlbumById = (id) => {
   return new Promise((resolve, reject) => {
-    let result;
-    albums.forEach((album) => {
-      if (album.id ==id) result = album;
-    });
-    if (result) {
-      return resolve(result);
-    } else {
-      reject("no album matches!");
+    for(let i = 0; i < albums.length; i++) {
+      var album;
+      if (albums[i].id == id) {
+        album = albums[i]
+      }
     }
-  });
-};
 
+    if (album) {
+      resolve(album)
+    } else {
+      reject("Album not found!")
+    }
+  })
+}
 
-module.exports.addAlbum = (album)=>{
-  return new Promise ((resolve, reject)=>{
-    if(albums){
+module.exports.getGenres = () => {
+  return new Promise((resolve, reject) => {
+    if(genres.length > 0) {
+      resolve(genres)
+    } else {
+      reject("no albums")
+    }
+  })
+}
+
+module.exports.addAlbum = (album) => {
+  return new Promise((resolve, reject) => {
       album.id = albums.length + 1
       albums.push(album)
       resolve()
-    }else{
-      console.log("albums not available")
-      reject();
+  })
+}
+
+module.exports.getAlbumsByGenre = (genreID) => {
+  return new Promise((resolve, reject) => {
+    var genreAlbums = []
+    for(let i = 0; i < albums.length; i++) {
+      if (albums[i].genre == genreID) {
+        genreAlbums.push(albums[i])
+      }
+    }
+    if (genreAlbums) {
+      resolve(genreAlbums)
+    } else {
+      reject("Albums not found for this genre!")
     }
   })
 }

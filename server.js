@@ -1,92 +1,84 @@
-const express = require("express");
-const app = express();
-const path = require("path");
+const express = require("express")
+const app = express()
+const path = require("path")
 
 const multer = require("multer");
-const cloudinary = require("cloudinary");
-const sstreamifier = require("streamifier");
+const cloudinary = require('cloudinary').v2
+const streamifier = require('streamifier')
 
-const env = require("dotenv");
-env.config();
+const env = require('dotenv')
+env.config()
 
-const soundService = require("./soundService"); //import soundService.js
+const soundService = require("./soundService")
 
-const HTTP_PORT = process.env.PORT || 8080;
+const exphbs = require('express-handlebars')
+app.engine('.hbs', exphbs.engine({ extname: '.hbs' }))
+app.set('view engine', '.hbs')
+
+const HTTP_PORT = process.env.PORT || 8080
 
 cloudinary.config({
-  cloud_name: "dwleas0js", //process.env.CLOUD_NAME (private)
-  api_key: "353252431234466",
-  api_secret: "YYpEl4oJnukC1VSrQ1GYctxaGXU",
-  secure: true,
-});
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+  secure: true
+})
 
-const upload = multer(); // no {storage: storage}
+const upload = multer() // no { storage: storage } 
 
 function onHttpStart() {
-  console.log("Express http sever listening on :" + HTTP_PORT);
+  console.log("Express http server listening on: " + HTTP_PORT + " 🚀🚀🚀")
 }
 
-app.use(express.static("public"));
+app.use(express.static("public"))
 
 app.get("/", (req, res) => {
-  //res.send("Hello, welcome to soundExpress");
-  //res.send("/about");
-  res.sendFile(path.join(__dirname, "/views/about.html"));
-});
+  // res.sendFile(path.join(__dirname,"/views/about.html"))
+  res.redirect("/albums")
+})
 
 app.get("/albums", (req, res) => {
-  soundService
-    .getAlbums()
-    .then((albums) => {
-      res.json(albums);
+  if (req.query.genre) {
+    soundService.getAlbumsByGenre(req.query.genre).then((genreAlbums) => {
+      res.render('albums', {
+        data: genreAlbums,
+        layout: 'main'
+      })
+    }).catch((err) => res.json({message: err})) 
+  } else {
+  soundService.getAlbums().then((albums) => {
+    res.render('albums', {
+      data: albums,
+      layout: 'main'
     })
-    .catch((err) => {
-      console.log(err);
-      res.send("there's been a error!");
-    });
-});
+  }).catch((err) => res.json({message: err}))
+  }
+})
+
 
 app.get("/albums/new", (req, res) => {
-  res.sendFile(path.join(__dirname, "/views/albumForm.html"));
-});
-
-//get the specific id page
-app.get("/albums/:id", (req, res) => {
-  //console.log(req.params);
-  soundService
-    .getAlbumById(req.params.id)
-    .then((album) => {
-      res.json(album);
+  // res.sendFile(path.join(__dirname, "/views/albumForm.html"))
+  soundService.getGenres().then((genres) => {
+    res.render('albumForm', {
+      data: genres,
+      layout: 'main'
     })
-    .catch((err) => {
-      res.json(err);
-    });
-});
+  })
+})
 
-app.get("/genres", (req, res) => {
-  soundService
-    .getGenres()
-    .then((genres) => {
-      res.json(genres);
-    })
-    .catch((err) => {
-      console.log(err);
-      res.send("there's been a error!");
-    });
-});
-
-//name of the middleware(file name)
-app.post("/albums/new", upload.single("albumCover"), (res, req) => {
+app.post("/albums/new", upload.single("albumCover"), (req, res) => {
   if (req.file) {
     let streamUpload = (req) => {
       return new Promise((resolve, reject) => {
-        let stream = cloudinary.uploader.upload_stream((error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
+        let stream = cloudinary.uploader.upload_stream(
+          (error, result) => {
+            if (result) {
+              resolve(result);
+            } else {
+              reject(error);
+            }
           }
-        });
+        );
 
         streamifier.createReadStream(req.file.buffer).pipe(stream);
       });
@@ -108,22 +100,43 @@ app.post("/albums/new", upload.single("albumCover"), (res, req) => {
   function processPost(imageUrl) {
     req.body.albumCover = imageUrl;
     soundService.addAlbum(req.body).then(() => {
-      res.redirect("/albums");
-    });
-    // TODO: Process the req.body and add it as a new Blog Post before redirecting to /posts
+      res.redirect("/albums")
+    })
   }
-});
+
+})
+
+app.get("/albums/:id", (req, res) => {
+  soundService.getAlbumById(req.params.id).then((album) => {
+    var array = []
+    array.push(album)
+    res.render('albums', {
+      data: array,
+      layout: 'main'
+    })
+  }).catch((err) => {
+    res.json({message: err})
+  })
+})
+
+app.get("/genres", (req, res) => {
+  soundService.getGenres().then((genres) => {
+    res.render('genres', {
+      data: genres,
+      layout: 'main'
+    })
+  }).catch((err) => {
+    console.log(err)
+    res.json({message: err})
+  })
+})
 
 app.use((req, res) => {
   res.status(404).send("Page Not Found");
-});
+})
 
-//read the resource Step 1: Obtaining the Data
-soundService
-  .initialize()
-  .then(() => {
-    app.listen(HTTP_PORT, onHttpStart()); //once the resource has been read, we listen the website
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+soundService.initialize().then(() => {
+  app.listen(HTTP_PORT, onHttpStart)
+}).catch((err) => {
+  console.log(err)
+})
