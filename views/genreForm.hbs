@@ -1,11 +1,12 @@
-  <h1>New Album</h1>
+  {{> genresTable}}
+  <h1>New Genre</h1>
   <div class="container-fluid">
-    <form action="/genres/new" method="POST" enctype="multipart/form-data">
+    <form action="/genres/new" method="POST">
       <div class="form-group">
         <label for="genre">Genre</label>
-        <input type="text" class="form-control" id="genre" name="title" placeholder="Enter genre">
+        <input type="text" class="form-control" id="genre" name="genre" placeholder="Enter genre">
       </div>
-    
+
       </br>
       <button type="submit" class="btn btn-primary">Submit</button>
     </form>

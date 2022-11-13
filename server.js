@@ -18,9 +18,9 @@ app.set("view engine", ".hbs");
 const HTTP_PORT = process.env.PORT || 8080;
 
 cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET,
+  cloud_name: "dwleas0js",
+  api_key: "353252431234466",
+  api_secret: "YYpEl4oJnukC1VSrQ1GYctxaGXU",
   secure: true,
 });
 
@@ -31,6 +31,7 @@ function onHttpStart() {
 }
 
 app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   // res.sendFile(path.join(__dirname,"/views/about.html"))
@@ -39,19 +40,14 @@ app.get("/", (req, res) => {
 
 app.get("/albums", (req, res) => {
   if (req.query.genre) {
-    soundService
-      .getAlbumsByGenre(req.query.genre)
-      .then((genreAlbums) => {
+    soundService.getAlbumsByGenre(req.query.genre).then((genreAlbums) => {
         res.render("albums", {
           data: genreAlbums,
           layout: "main",
         });
-      })
-      .catch((err) => res.json({ message: err }));
+      }).catch((err) => res.json({ message: err }));
   } else {
-    soundService
-      .getAlbums()
-      .then((albums) => {
+    soundService.getAlbums().then((albums) => {
         res.render("albums", {
           data: albums,
           layout: "main",
@@ -75,12 +71,13 @@ app.post("/albums/new", upload.single("albumCover"), (req, res) => {
   if (req.file) {
     let streamUpload = (req) => {
       return new Promise((resolve, reject) => {
-        let stream = cloudinary.uploader.upload_stream((error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
-          }
+        let stream = cloudinary.uploader.upload_stream(
+          (error, result) => {
+            if (result) {
+              resolve(result);
+            } else {
+              reject(error);
+            }
         });
 
         streamifier.createReadStream(req.file.buffer).pipe(stream);
@@ -109,81 +106,74 @@ app.post("/albums/new", upload.single("albumCover"), (req, res) => {
 });
 
 app.get("/albums/:id", (req, res) => {
-  soundService
-    .getAlbumById(req.params.id)
-    .then((album) => {
+  soundService.getAlbumById(req.params.id).then((album) => {
       // var array = []
       // array.push(album)
       res.render("albums", {
-        data: array,
+        data: album,
         layout: "main",
       });
-    })
-    .catch((err) => {
+    }).catch((err) => {
+      console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/albums/delete/:id", (req, res) => {
-  soundService
-    .deleteAlbum(req.params.id)
-    .then(() => {
+  soundService.deleteAlbum(req.params.id).then(() => {
       res.redirect("/albums");
-    })
-    .catch((err) => {
+    }).catch((err) => {
       console.log(err);
+      res.json({message: err});
     });
 });
 
 app.get("/genres", (req, res) => {
-  soundService
-    .getGenres()
-    .then((genres) => {
+  soundService.getGenres().then((genres) => {
       res.render("genres", {
         data: genres,
         layout: "main",
       });
-    })
-    .catch((err) => {
+    }).catch((err) => {
       console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/genres/new", (req, res) => {
-  soundService
-    .getGenres()
-    .then((genres) => {
+  soundService.getGenres().then((genres) => {
       res.render("genreForm", {
+        data: genres,
         layout: "main",
       });
-    })
-    .catch((err) => {
+    }).catch((err) => {
       console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/genres/delete/:id", (req, res) => {
-  soundService
-    .deleteGenre(req.params.id)
-    .then(() => {
+  soundService.deleteGenre(req.params.id).then(() => {
       res.redirect("/genres");
-    })
-    .catch((err) => {
+    }).catch((err) => {
       console.log(err);
     });
 });
+
+app.post("/genres/new", (req, res) => {
+  console.log(req.body)
+  soundService.addGenre(req.body).then(() => {
+    res.redirect("/genres")
+  })
+})
 
 app.use((req, res) => {
   res.status(404).send("Page Not Found");
 });
 
 soundService
-  .initialize()
-  .then(() => {
+  .initialize().then(() => {
     app.listen(HTTP_PORT, onHttpStart);
-  })
-  .catch((err) => {
+  }).catch((err) => {
     console.log(err);
   });
