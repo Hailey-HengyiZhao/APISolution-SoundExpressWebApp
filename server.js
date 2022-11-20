@@ -40,14 +40,19 @@ app.get("/", (req, res) => {
 
 app.get("/albums", (req, res) => {
   if (req.query.genre) {
-    soundService.getAlbumsByGenre(req.query.genre).then((genreAlbums) => {
+    soundService
+      .getAlbumsByGenre(req.query.genre)
+      .then((genreAlbums) => {
         res.render("albums", {
           data: genreAlbums,
           layout: "main",
         });
-      }).catch((err) => res.json({ message: err }));
+      })
+      .catch((err) => res.json({ message: err }));
   } else {
-    soundService.getAlbums().then((albums) => {
+    soundService
+      .getAlbums()
+      .then((albums) => {
         res.render("albums", {
           data: albums,
           layout: "main",
@@ -71,13 +76,12 @@ app.post("/albums/new", upload.single("albumCover"), (req, res) => {
   if (req.file) {
     let streamUpload = (req) => {
       return new Promise((resolve, reject) => {
-        let stream = cloudinary.uploader.upload_stream(
-          (error, result) => {
-            if (result) {
-              resolve(result);
-            } else {
-              reject(error);
-            }
+        let stream = cloudinary.uploader.upload_stream((error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
         });
 
         streamifier.createReadStream(req.file.buffer).pipe(stream);
@@ -106,74 +110,165 @@ app.post("/albums/new", upload.single("albumCover"), (req, res) => {
 });
 
 app.get("/albums/:id", (req, res) => {
-  soundService.getAlbumById(req.params.id).then((album) => {
+  soundService
+    .getAlbumById(req.params.id)
+    .then((album) => {
       // var array = []
       // array.push(album)
       res.render("albums", {
         data: album,
         layout: "main",
       });
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/albums/delete/:id", (req, res) => {
-  soundService.deleteAlbum(req.params.id).then(() => {
+  soundService
+    .deleteAlbum(req.params.id)
+    .then(() => {
       res.redirect("/albums");
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
-      res.json({message: err});
+      res.json({ message: err });
     });
 });
 
 app.get("/genres", (req, res) => {
-  soundService.getGenres().then((genres) => {
+  soundService
+    .getGenres()
+    .then((genres) => {
       res.render("genres", {
         data: genres,
         layout: "main",
       });
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/genres/new", (req, res) => {
-  soundService.getGenres().then((genres) => {
+  soundService
+    .getGenres()
+    .then((genres) => {
       res.render("genreForm", {
         data: genres,
         layout: "main",
       });
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       res.json({ message: err });
     });
 });
 
 app.get("/genres/delete/:id", (req, res) => {
-  soundService.deleteGenre(req.params.id).then(() => {
+  soundService
+    .deleteGenre(req.params.id)
+    .then(() => {
       res.redirect("/genres");
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
     });
 });
 
 app.post("/genres/new", (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   soundService.addGenre(req.body).then(() => {
-    res.redirect("/genres")
-  })
-})
+    res.redirect("/genres");
+  });
+});
+
+app.get("/songs/new", (req, res) => {
+  // res.sendFile(path.join(__dirname, "/views/albumForm.html"))
+  soundService.getAlbums().then((albums) => {
+    res.render("songForm", {
+      data: albums,
+      layout: "main",
+    });
+  });
+});
+
+app.post("/songs/new", upload.single("songFile"), (req, res) => {
+  if (req.file) {
+    let streamUpload = (req) => {
+      return new Promise((resolve, reject) => {
+        let stream = cloudinary.uploader.upload_stream((error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
+        });
+
+        streamifier.createReadStream(req.file.buffer).pipe(stream);
+      });
+    };
+
+    async function upload(req) {
+      let result = await streamUpload(req);
+      console.log(result);
+      return result;
+    }
+
+    upload(req).then((uploaded) => {
+      processPost(uploaded.url);
+    });
+  } else {
+    processPost("");
+  }
+
+  function processPost(songFileUrl) {
+    req.body.songFile = songFileUrl;
+    soundService.addSong(req.body).then(() => {
+      const currentAlbumID = req.body.albumID;
+      res.redirect(`/songs/${currentAlbumID}`);
+    });
+  }
+});
+
+app.get("/songs/:albumID", (req, res) => {
+  soundService
+    .getSongs(req.params.albumID)
+    .then((songs) => {
+      res.render("songs", {
+        data: songs,
+        layout: "main",
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.json({ message: err });
+    });
+});
+
+app.get("/songs/delete/:id", (req, res) => {
+  soundService
+    .deleteSong(req.params.songID)
+    .then(() => {
+      res.redirect("/albums");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
 
 app.use((req, res) => {
   res.status(404).send("Page Not Found");
 });
 
 soundService
-  .initialize().then(() => {
+  .initialize()
+  .then(() => {
     app.listen(HTTP_PORT, onHttpStart);
-  }).catch((err) => {
+  })
+  .catch((err) => {
     console.log(err);
   });

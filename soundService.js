@@ -1,5 +1,5 @@
-const fs = require("fs")
-const env = require('dotenv')
+const fs = require("fs");
+const env = require("dotenv");
 env.config();
 const Sequelize = require("sequelize");
 
@@ -22,13 +22,13 @@ var sequelize = new Sequelize(
 var Album = sequelize.define("Album", {
   albumID: {
     type: Sequelize.INTEGER,
-    primaryKey: true, 
-    autoIncrement: true
+    primaryKey: true,
+    autoIncrement: true,
   },
   title: Sequelize.STRING,
   artist: Sequelize.STRING,
   albumCover: Sequelize.STRING,
-  year: Sequelize.INTEGER
+  year: Sequelize.INTEGER,
 });
 
 //genre model
@@ -38,22 +38,23 @@ var Genre = sequelize.define("Genre", {
     primaryKey: true,
     autoIncrement: true,
   },
-  genre: Sequelize.STRING
+  genre: Sequelize.STRING,
+});
+
+//song model
+var Song = sequelize.define("Song", {
+  songID: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  title: Sequelize.STRING,
+  songFile: Sequelize.STRING,
 });
 
 // relationship between Album and Genre: Album belongs to Genre
+Song.belongsTo(Album, { foreignKey: "albumID" });
 Album.belongsTo(Genre, { foreignKey: "genreID" });
-
-// test connection
-sequelize.authenticate()
-  .then(function () {
-    console.log("Connection has been established successfully.");
-  })
-  .catch(function (err) {
-    console.log("Unable to connect to the database:", err);
-  });
-
-
 
 module.exports.initialize = () => {
   return new Promise((resolve, reject) => {
@@ -88,7 +89,6 @@ module.exports.initialize = () => {
   });
 };
 
-
 module.exports.getAlbums = () => {
   return new Promise((resolve, reject) => {
     Album.findAll()
@@ -108,7 +108,8 @@ module.exports.getAlbumById = (id) => {
       where: {
         albumID: id,
       },
-    }).then((album) => {
+    })
+      .then((album) => {
         resolve(album);
       })
       .catch((err) => {
@@ -120,9 +121,11 @@ module.exports.getAlbumById = (id) => {
 
 module.exports.getGenres = () => {
   return new Promise((resolve, reject) => {
-    Genre.findAll().then((genreData) => {
+    Genre.findAll()
+      .then((genreData) => {
         resolve(genreData);
-      }).catch((err) => {
+      })
+      .catch((err) => {
         console.log("CAN'T FIND GENRES! ERROR" + err);
         reject();
       });
@@ -131,11 +134,13 @@ module.exports.getGenres = () => {
 
 module.exports.addGenre = (genre) => {
   return new Promise((resolve, reject) => {
-    Genre.create(genre).then(() => {
+    Genre.create(genre)
+      .then(() => {
         console.log("Genre created");
         resolve();
-      }).catch((err) => {
-        console.log("GENRE CREATION ERROR! Error: "+err);
+      })
+      .catch((err) => {
+        console.log("GENRE CREATION ERROR! Error: " + err);
         reject();
       });
   });
@@ -143,11 +148,13 @@ module.exports.addGenre = (genre) => {
 
 module.exports.addAlbum = (album) => {
   return new Promise((resolve, reject) => {
-    Album.create(album).then(() => {
+    Album.create(album)
+      .then(() => {
         console.log("Album created");
         resolve();
-      }).catch((err) => {
-        console.log("ALBUM CREATION ERROR! Error: "+err);
+      })
+      .catch((err) => {
+        console.log("ALBUM CREATION ERROR! Error: " + err);
         reject();
       });
   });
@@ -159,11 +166,12 @@ module.exports.getAlbumsByGenre = (genreID) => {
       where: {
         genreID: genreID,
       },
-    }).then((albums) => {
+    })
+      .then((albums) => {
         resolve(albums);
       })
       .catch((err) => {
-        console.log("CAN'T FIND ALBUM BY GENRE! Error: "+err);
+        console.log("CAN'T FIND ALBUM BY GENRE! Error: " + err);
         reject();
       });
   });
@@ -181,7 +189,7 @@ module.exports.deleteAlbum = (albumID) => {
         resolve();
       })
       .catch((err) => {
-        console.log("ALBUM DELETION ERROR! Error: "+err);
+        console.log("ALBUM DELETION ERROR! Error: " + err);
         reject();
       });
   });
@@ -199,8 +207,58 @@ module.exports.deleteGenre = (genreID) => {
         resolve();
       })
       .catch((err) => {
-        console.log("GENRE DELETION ERROR! Error: "+err);
+        console.log("GENRE DELETION ERROR! Error: " + err);
         reject();
       });
   });
 };
+
+module.exports.getSongs = (albumID) => {
+  return new Promise((resolve, reject) => {
+    Song.findAll({
+      where: {
+        albumID: albumID,
+      },
+    })
+      .then((songs) => {
+        resolve(songs);
+      })
+      .catch((err) => {
+        console.log("CAN'T FIND SONGS BY THIS ALBUM ID! ERROR" + err);
+        reject();
+      });
+  });
+};
+
+module.exports.addSong= (song) => {
+  return new Promise((resolve, reject) => {
+    Song.create(song)
+      .then(() => {
+        console.log("Song created");
+        resolve();
+      })
+      .catch((err) => {
+        console.log("SONG CREATION ERROR! Error: " + err);
+        reject();
+      });
+  });
+};
+
+module.exports.deleteGenre = (songID) => {
+  return new Promise((resolve, reject) => {
+    Song.destroy({
+      where: {
+        songID: songID,
+      },
+    })
+      .then(() => {
+        console.log("Song deleted");
+        resolve();
+      })
+      .catch((err) => {
+        console.log("SONG DELETION ERROR! Error: " + err);
+        reject();
+      });
+  });
+};
+
