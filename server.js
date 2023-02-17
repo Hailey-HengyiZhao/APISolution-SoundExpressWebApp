@@ -9,7 +9,10 @@ const streamifier = require("streamifier");
 const env = require("dotenv");
 env.config();
 
+const clientSessions = require("client-sessions");
+
 const soundService = require("./soundService");
+const userService = require("./userService");
 
 const exphbs = require("express-handlebars");
 app.engine(".hbs", exphbs.engine({ extname: ".hbs" }));
@@ -30,6 +33,26 @@ function onHttpStart() {
   console.log("Express http server listening on: " + HTTP_PORT + " 🚀🚀🚀");
 }
 
+app.use(clientSessions({
+  cookieName: "session", // this is the object name that will be added to 'req'
+  secret: "week10example_web322", // this should be a long un-guessable string.
+  duration: 2 * 60 * 1000, // duration of the session in milliseconds (2 minutes)
+  activeDuration: 1000 * 60 // the session will be extended by this many ms each request (1 minute)
+}))
+
+function ensureLogin(req, res, next) {
+  if (!req.session.user) {
+    res.redirect("/login");
+  } else {
+    next();
+  }
+}
+
+app.use(function(req, res, next) {
+  res.locals.session = req.session;
+  next();
+})
+
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
 
@@ -38,7 +61,7 @@ app.get("/", (req, res) => {
   res.redirect("/albums");
 });
 
-app.get("/albums", (req, res) => {
+app.get("/albums", ensureLogin, (req, res) => {
   if (req.query.genre) {
     soundService
       .getAlbumsByGenre(req.query.genre)
@@ -62,7 +85,7 @@ app.get("/albums", (req, res) => {
   }
 });
 
-app.get("/albums/new", (req, res) => {
+app.get("/albums/new", ensureLogin, (req, res) => {
   // res.sendFile(path.join(__dirname, "/views/albumForm.html"))
   soundService.getGenres().then((genres) => {
     res.render("albumForm", {
@@ -109,7 +132,7 @@ app.post("/albums/new", upload.single("albumCover"), (req, res) => {
   }
 });
 
-app.get("/albums/:id", (req, res) => {
+app.get("/albums/:id",ensureLogin, (req, res) => {
   soundService
     .getAlbumById(req.params.id)
     .then((album) => {
@@ -126,7 +149,7 @@ app.get("/albums/:id", (req, res) => {
     });
 });
 
-app.get("/albums/delete/:id", (req, res) => {
+app.get("/albums/delete/:id",ensureLogin, (req, res) => {
   soundService
     .deleteAlbum(req.params.id)
     .then(() => {
@@ -138,7 +161,7 @@ app.get("/albums/delete/:id", (req, res) => {
     });
 });
 
-app.get("/genres", (req, res) => {
+app.get("/genres",ensureLogin, (req, res) => {
   soundService
     .getGenres()
     .then((genres) => {
@@ -153,7 +176,7 @@ app.get("/genres", (req, res) => {
     });
 });
 
-app.get("/genres/new", (req, res) => {
+app.get("/genres/new", ensureLogin,(req, res) => {
   soundService
     .getGenres()
     .then((genres) => {
@@ -168,7 +191,7 @@ app.get("/genres/new", (req, res) => {
     });
 });
 
-app.get("/genres/delete/:id", (req, res) => {
+app.get("/genres/delete/:id", ensureLogin,(req, res) => {
   soundService
     .deleteGenre(req.params.id)
     .then(() => {
@@ -186,7 +209,7 @@ app.post("/genres/new", (req, res) => {
   });
 });
 
-app.get("/songs/new", (req, res) => {
+app.get("/songs/new", ensureLogin,(req, res) => {
   // res.sendFile(path.join(__dirname, "/views/albumForm.html"))
   soundService.getAlbums().then((albums) => {
     res.render("songForm", {
@@ -234,7 +257,7 @@ app.post("/songs/new", upload.single("songFile"), (req, res) => {
   }
 });
 
-app.get("/songs/:albumID", (req, res) => {
+app.get("/songs/:albumID", ensureLogin, (req, res) => {
   soundService
     .getSongs(req.params.albumID)
     .then((songs) => {
@@ -249,7 +272,7 @@ app.get("/songs/:albumID", (req, res) => {
     });
 });
 
-app.get("/songs/delete/:id", (req, res) => {
+app.get("/songs/delete/:id", ensureLogin, (req, res) => {
   soundService
     .deleteSong(req.params.songID)
     .then(() => {
@@ -260,12 +283,73 @@ app.get("/songs/delete/:id", (req, res) => {
     });
 });
 
+app.get("/register", (req, res) => {
+  res.render("registerForm", { layout: "main" });
+});
+
+app.post("/register", (req, res) => {
+  console.log(req.body);
+  userService
+    .registerUser(req.body)
+    .then((date) => {
+      console.log(date);
+      res.render("registerForm", {
+        successMessage: "User Creation Successful!",
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.render("registerForm", {
+        errorMessage: "User Creation Error! " + err
+      });
+    });
+});
+
+app.get("/login", (req, res) => {
+  res.render('loginForm', {
+    layout: 'main'
+  })
+})
+
+app.post("/login", (req, res) => {
+  // session
+  console.log(req.session.user)
+
+  req.body.userAgent = req.get('User-Agent')
+  userService.loginUser(req.body).then((user) => {
+
+    req.session.user = {
+      username: user.username,
+      email: user.email,
+      loginHistory: user.loginHistory
+    }
+    console.log(req.session.user)
+    res.redirect('/albums')
+  }).catch((err) => {
+    console.log(err)
+    res.render('loginForm', {
+      errorMessage: "User Authentication Error: "+err
+    })
+  })
+})
+
+app.get("/loginHistory", (req, res) => {
+  res.render('loginHistory', {
+    layout: 'main'
+  })
+})
+
+app.get("/logout", ensureLogin, function(req, res) {
+  req.session.reset();
+  res.redirect("/login");
+})
 app.use((req, res) => {
   res.status(404).send("Page Not Found");
 });
 
 soundService
   .initialize()
+  .then(userService.initialize())
   .then(() => {
     app.listen(HTTP_PORT, onHttpStart);
   })

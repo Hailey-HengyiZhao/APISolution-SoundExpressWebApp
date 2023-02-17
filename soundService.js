@@ -230,7 +230,7 @@ module.exports.getSongs = (albumID) => {
   });
 };
 
-module.exports.addSong= (song) => {
+module.exports.addSong = (song) => {
   return new Promise((resolve, reject) => {
     Song.create(song)
       .then(() => {
@@ -261,4 +261,3 @@ module.exports.deleteGenre = (songID) => {
       });
   });
 };
-
